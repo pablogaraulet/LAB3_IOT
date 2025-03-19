@@ -1,18 +1,59 @@
-#include <Arduino.h>
+#include <WiFi.h>
+#include <HttpClient.h>
 
-// put function declarations here:
-int myFunction(int, int);
+// Configura tu WiFi
+const char* ssid = "BLVD63";
+const char* password = "sdBLVD63";
+
+// Configuración de la API
+const char kHostname[] = "worldtimeapi.org";
+const char kPath[] = "/api/timezone/Europe/London.txt";
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+    Serial.begin(115200);
+    delay(1000);
+
+    // Conectar a WiFi
+    Serial.print("Conectando a ");
+    Serial.println(ssid);
+    WiFi.begin(ssid, password);
+
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+
+    Serial.println("\nWiFi conectado");
+    Serial.print("Dirección IP: ");
+    Serial.println(WiFi.localIP());
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-}
+    WiFiClient client;
+    HttpClient http(client);
 
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+    Serial.println("Haciendo solicitud HTTP...");
+    int err = http.get(kHostname, kPath);
+    
+    if (err == 0) {
+        Serial.println("Solicitud iniciada con éxito");
+
+        int statusCode = http.responseStatusCode();
+        Serial.print("Código de estado: ");
+        Serial.println(statusCode);
+
+        if (statusCode == 200) {
+            Serial.println("Respuesta recibida:");
+            while (http.available()) {
+                char c = http.read();
+                Serial.print(c);
+            }
+        }
+    } else {
+        Serial.print("Error en la solicitud: ");
+        Serial.println(err);
+    }
+
+    http.stop();
+    delay(10000);  // Espera 10 segundos antes de la próxima solicitud
 }
