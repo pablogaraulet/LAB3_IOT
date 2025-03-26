@@ -1,59 +1,59 @@
 #include <WiFi.h>
 #include <HttpClient.h>
 
-// Configura tu WiFi
-const char* ssid = "BLVD63";
-const char* password = "sdBLVD63";
+// Replace with your WiFi credentials
+const char* ssid = "iPhone";
+const char* password = "pablo2003";
 
-// Configuración de la API
-const char kHostname[] = "worldtimeapi.org";
-const char kPath[] = "/api/timezone/Europe/London.txt";
+// AWS server settings
+const char* server = "18.223.170.211";  // Your EC2 public IP
+int port = 5000;                        // Flask default port
+const char* path = "/?var=10";          // Endpoint path
 
 void setup() {
     Serial.begin(115200);
     delay(1000);
 
-    // Conectar a WiFi
-    Serial.print("Conectando a ");
+    Serial.print("Connecting to WiFi: ");
     Serial.println(ssid);
     WiFi.begin(ssid, password);
 
+    // Wait until connected
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
     }
 
-    Serial.println("\nWiFi conectado");
-    Serial.print("Dirección IP: ");
+    Serial.println("\nWiFi connected successfully.");
+    Serial.print("Local IP address: ");
     Serial.println(WiFi.localIP());
 }
 
 void loop() {
-    WiFiClient client;
-    HttpClient http(client);
+    WiFiClient wifi;
+    HttpClient client(wifi);  // Use the 1-argument constructor
 
-    Serial.println("Haciendo solicitud HTTP...");
-    int err = http.get(kHostname, kPath);
-    
+    Serial.println("\n--- Start of Loop ---");
+
+    // Make GET request
+    int err = client.get(server, port, path);
+
     if (err == 0) {
-        Serial.println("Solicitud iniciada con éxito");
-
-        int statusCode = http.responseStatusCode();
-        Serial.print("Código de estado: ");
+        int statusCode = client.responseStatusCode();
+        Serial.print("Response status: ");
         Serial.println(statusCode);
 
-        if (statusCode == 200) {
-            Serial.println("Respuesta recibida:");
-            while (http.available()) {
-                char c = http.read();
-                Serial.print(c);
-            }
+        Serial.print("HTTP Response Body: ");
+        while (client.available()) {
+            char c = client.read();
+            Serial.print(c);
         }
+        Serial.println();
     } else {
-        Serial.print("Error en la solicitud: ");
+        Serial.print("Connection failed. Error: ");
         Serial.println(err);
     }
 
-    http.stop();
-    delay(10000);  // Espera 10 segundos antes de la próxima solicitud
+    client.stop();
+    delay(5000); // Wait 5 seconds
 }
