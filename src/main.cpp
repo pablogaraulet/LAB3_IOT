@@ -1,59 +1,73 @@
+#include <Wire.h>
+#include <Adafruit_AHTX0.h>
 #include <WiFi.h>
 #include <HttpClient.h>
 
-// Replace with your WiFi credentials
-const char* ssid = "iPhone";
-const char* password = "pablo2003";
+// WiFi
+const char *ssid = "iPhone";
+const char *password = "pablo2003";
 
-// AWS server settings
-const char* server = "18.223.170.211";  // Your EC2 public IP
-int port = 5000;                        // Flask default port
-const char* path = "/?var=10";          // Endpoint path
+// Server
+const char *server = "18.223.170.211";
+int port = 5000;
+
+Adafruit_AHTX0 aht;
 
 void setup() {
-    Serial.begin(115200);
-    delay(1000);
+  Serial.begin(115200);
+  delay(1000);
 
-    Serial.print("Connecting to WiFi: ");
-    Serial.println(ssid);
-    WiFi.begin(ssid, password);
+  Serial.println("Connecting to WiFi...");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi connected!");
 
-    // Wait until connected
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
+  // Inicializa I2C en GPIO21 (SDA) y GPIO22 (SCL)
+  Wire.begin(21, 22);
+  delay(100); // <- a veces ayuda un pequeño delay antes de comenzar
 
-    Serial.println("\nWiFi connected successfully.");
-    Serial.print("Local IP address: ");
-    Serial.println(WiFi.localIP());
+  // Pasa explícitamente el objeto Wire
+  if (!aht.begin(&Wire)) {
+    Serial.println("Could not find AHT20/DHT20 sensor. Check wiring!");
+    while (1) delay(10);
+  }
+  Serial.println("Sensor initialized correctly.");
 }
 
 void loop() {
-    WiFiClient wifi;
-    HttpClient client(wifi);  // Use the 1-argument constructor
+  sensors_event_t humidity, temp;
+  aht.getEvent(&humidity, &temp);  // populate temp and humidity objects
 
-    Serial.println("\n--- Start of Loop ---");
+  float t = temp.temperature;
+  float h = humidity.relative_humidity;
 
-    // Make GET request
-    int err = client.get(server, port, path);
+  Serial.print("Temp: ");
+  Serial.print(t);
+  Serial.print(" °C  | Hum: ");
+  Serial.print(h);
+  Serial.println(" %");
 
-    if (err == 0) {
-        int statusCode = client.responseStatusCode();
-        Serial.print("Response status: ");
-        Serial.println(statusCode);
+  // Build request path
+  String url = "/?temp=" + String(t, 1) + "&hum=" + String(h, 1);
+  WiFiClient wifi;
+  HttpClient client(wifi);
+  int err = client.get(server, port, url.c_str());
 
-        Serial.print("HTTP Response Body: ");
-        while (client.available()) {
-            char c = client.read();
-            Serial.print(c);
-        }
-        Serial.println();
-    } else {
-        Serial.print("Connection failed. Error: ");
-        Serial.println(err);
+  if (err == 0) {
+    Serial.print("Response: ");
+    while (client.available()) {
+      char c = client.read();
+      Serial.print(c);
     }
+    Serial.println();
+  } else {
+    Serial.print("Request failed, error: ");
+    Serial.println(err);
+  }
 
-    client.stop();
-    delay(5000); // Wait 5 seconds
+  client.stop();
+  delay(5000);
 }
