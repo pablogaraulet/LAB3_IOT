@@ -3,11 +3,11 @@
 #include <WiFi.h>
 #include <HttpClient.h>
 
-// WiFi
+// WiFi credentials
 const char *ssid = "iPhone";
 const char *password = "pablo2003";
 
-// Server
+// Server configuration
 const char *server = "18.223.170.211";
 int port = 5000;
 
@@ -25,28 +25,28 @@ void setup() {
   }
   Serial.println("\nWiFi connected!");
 
-  // Inicializa I2C en GPIO21 (SDA) y GPIO22 (SCL)
+  // Initialize I2C on GPIO21 (SDA) and GPIO22 (SCL)
   Wire.begin(21, 22);
-  delay(100); // <- a veces ayuda un pequeño delay antes de comenzar
+  delay(100); // <- short delay may help initialization
 
-  // Pasa explícitamente el objeto Wire
+  // Explicitly pass the Wire object
   if (!aht.begin(&Wire)) {
     Serial.println("Could not find AHT20/DHT20 sensor. Check wiring!");
     while (1) delay(10);
   }
-  Serial.println("Sensor initialized correctly.");
+  Serial.println("Sensor initialized successfully.");
 }
 
 void loop() {
   sensors_event_t humidity, temp;
-  aht.getEvent(&humidity, &temp);  // populate temp and humidity objects
+  aht.getEvent(&humidity, &temp);  // Get temperature and humidity data
 
   float t = temp.temperature;
   float h = humidity.relative_humidity;
 
   Serial.print("Temp: ");
   Serial.print(t);
-  Serial.print(" °C  | Hum: ");
+  Serial.print(" °C  | Humidity: ");
   Serial.print(h);
   Serial.println(" %");
 
